@@ -317,7 +317,7 @@ static void send_chat_cb(SlackAccount *sa, gpointer data, json_value *json, cons
 		return;
 	}
 
-	char *html = slack_message_to_html(sa, json_get_prop_strptr(json, "text"), NULL, &send->flags);
+	char *html = slack_json_to_html(sa, json, &send->flags);
 	time_t mt = slack_parse_time(json_get_prop(json, "ts"));
 	serv_got_chat_in(sa->gc, send->cid, purple_connection_get_display_name(sa->gc), send->flags, html, mt);
 	send_chat_free(send);

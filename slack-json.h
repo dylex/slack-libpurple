@@ -18,7 +18,6 @@
 	json_get_val(JSON, boolean, DEF)
 
 json_value *json_get_prop(json_value *val, const char *prop) __attribute__((pure));
-json_value *json_get_prop_array(json_value *val, const char *prop) __attribute__((pure));
 
 #define json_get_prop_type(JSON, PROP, TYPE) \
 	json_get_type(json_get_prop(JSON, PROP), TYPE)
