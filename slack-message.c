@@ -370,6 +370,10 @@ static void handle_message(SlackAccount *sa, SlackObject *obj, json_value *json,
 		}
 		g_string_append(html, ")");
 	}
+	else if (!g_strcmp0(subtype, "message_replied")) {
+		g_string_free(html, TRUE);
+		return;
+	}
 	else
 		slack_json_to_html(html, sa, message, &flags);
 
