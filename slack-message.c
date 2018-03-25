@@ -371,6 +371,11 @@ static void handle_message(SlackAccount *sa, SlackObject *obj, json_value *json,
 		}
 		g_string_append(html, ")");
 	}
+	else if (!g_strcmp0(subtype, "message_replied")) {
+		message = json_get_prop(json, "message");
+		g_string_append(html, "<font color=\"#717274\"><i>[thread]</i></font> ");
+		slack_json_to_html(html, sa, message, &flags);
+	}
 	else
 		slack_json_to_html(html, sa, message, &flags);
 
