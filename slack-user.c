@@ -56,7 +56,8 @@ SlackUser *slack_user_update(SlackAccount *sa, json_value *json) {
 	g_warn_if_fail(nick_name);
 	const char *real_name = json_get_prop_strptr(json, "real_name");
 	g_warn_if_fail(real_name);
-	gchar *name = g_strdup_printf("%s (%s)", nick_name, real_name)
+	char *name = malloc(g_utf8_strlen(nick_name, 512) + g_utf8_strlen(real_name, 512) + 20);
+	sprintf(name, "%s (%s)", nick_name, real_name);
 
 	if (g_strcmp0(user->object.name, name)) {
 		purple_debug_misc("slack", "user %s: %s\n", sid, name);
