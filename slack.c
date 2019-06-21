@@ -214,11 +214,11 @@ void slack_login_step(SlackAccount *sa) {
 			MSG("Requesting RTM");
 			slack_rtm_connect(sa);
 			break;
-		case 1: /* slack_connect_cb */
+		case 1: /* purple_websocket_connect */
 			MSG("Connecting to RTM");
-			/* purple_websocket_connect */
+			/* rtm_cb */
 			break;
-		case 2: /* rtm_cb */
+		case 2: /* slack_connect_cb */
 			MSG("RTM Connected");
 			break;
 		case 3: /* rtm_msg("hello") */
@@ -251,6 +251,11 @@ static void slack_close(PurpleConnection *gc) {
 	if (sa->ping_timer) {
 		purple_timeout_remove(sa->ping_timer);
 		sa->ping_timer = 0;
+	}
+
+	if (sa->tickle_timer) {
+		purple_timeout_remove(sa->tickle_timer);
+		sa->tickle_timer = 0;
 	}
 
 	if (sa->rtm) {
@@ -412,6 +417,9 @@ static void init_plugin(G_GNUC_UNUSED PurplePlugin *plugin)
 
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
 		purple_account_option_bool_new("Download user avatars", "enable_avatar_download", FALSE));
+
+	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
+		purple_account_option_bool_new("Maintain online presence", "maintain_online_presence", FALSE));
 
 	prpl_info.protocol_options = g_list_append(prpl_info.protocol_options,
 		purple_account_option_string_new("Prepend attachment lines with this string", "attachment_prefix", "▎ "));

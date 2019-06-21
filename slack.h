@@ -25,6 +25,7 @@ typedef struct _SlackAccount {
 	guint rtm_id;
 	GHashTable *rtm_call; /* unsigned rtm_id -> SlackRTMCall */
 	guint ping_timer;
+	guint tickle_timer;
 
 	struct _SlackTeam {
 		char *id;

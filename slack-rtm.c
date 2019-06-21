@@ -141,6 +141,19 @@ static gboolean ping_timer(gpointer data) {
 	return TRUE;
 }
 
+static void tickle_cb(SlackAccount *sa, gpointer data, json_value *json, const char *error) {
+	if (json_get_prop_boolean(json, "manual_away", TRUE))
+		return;
+	slack_rtm_send(sa, NULL, NULL, "tickle", NULL);
+}
+
+static gboolean tickle_timer(gpointer data) {
+	SlackAccount *sa = data;
+	if (purple_account_get_bool(sa->account, "maintain_online_presence", FALSE))
+		slack_api_call(sa, tickle_cb, NULL, "users.getPresence", "user", sa->self->object.id, NULL);
+	return TRUE;
+}
+
 static void rtm_connect_cb(SlackAccount *sa, gpointer data, json_value *json, const char *error) {
 	if (error) {
 		purple_connection_error_reason(sa->gc, slack_api_connection_error(error), error);
@@ -148,6 +161,16 @@ static void rtm_connect_cb(SlackAccount *sa, gpointer data, json_value *json, co
 	}
 
 	if (sa->rtm) {
+		if (sa->ping_timer) {
+			purple_timeout_remove(sa->ping_timer);
+			sa->ping_timer = 0;
+		}
+
+		if (sa->tickle_timer) {
+			purple_timeout_remove(sa->tickle_timer);
+			sa->tickle_timer = 0;
+		}
+
 		purple_websocket_abort(sa->rtm);
 		sa->rtm = NULL;
 	}
@@ -180,11 +203,13 @@ static void rtm_connect_cb(SlackAccount *sa, gpointer data, json_value *json, co
 	/* now that we have team info... */
 	slack_blist_init(sa);
 
-	slack_login_step(sa);
 	purple_debug_info("slack", "RTM URL: %s\n", url);
-	sa->rtm = purple_websocket_connect(sa->account, url, NULL, rtm_cb, sa);
 
+	sa->rtm = purple_websocket_connect(sa->account, url, NULL, rtm_cb, sa);
 	sa->ping_timer = purple_timeout_add_seconds(60, ping_timer, sa->rtm);
+	sa->tickle_timer = purple_timeout_add_seconds(1795, tickle_timer, sa);
+
+	slack_login_step(sa);
 }
 
 void slack_rtm_cancel(SlackRTMCall *call) {
