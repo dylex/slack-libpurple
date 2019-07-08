@@ -91,7 +91,7 @@ static void slack_set_idle(PurpleConnection *gc, int idle) {
 		return;
 
 	/* poke slack to maintain unidle status (how often?) */
-	slack_api_call(sa, NULL, NULL, "users.setPresence", "presence", "auto", NULL);
+	slack_rtm_send(sa, NULL, NULL, "tickle", NULL);
 }
 
 static GList *slack_chat_info(PurpleConnection *gc) {
