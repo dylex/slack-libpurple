@@ -8,16 +8,21 @@
 #include "slack-channel.h"
 #include "slack-conversation.h"
 #include "slack-message.h"
+#include "markdown.h"
 
 gchar *slack_html_to_message(SlackAccount *sa, const char *s, PurpleMessageFlags flags) {
 
 	if (flags & PURPLE_MESSAGE_RAW)
 		return g_strdup(s);
+	
+	gchar *escaped = markdown_escape_md(s, FALSE);
+	gchar *marked = markdown_html_to_markdown(escaped);
+	gchar *stripped = g_strstrip(purple_markup_strip_html(marked));
 
-	GString *msg = g_string_sized_new(strlen(s));
+	s = stripped;
+
+	GString *msg = g_string_sized_new(strlen(s) * 2);
 	while (*s) {
-		const char *ent;
-		int len;
 		if ((*s == '@' || *s == '#') && !(flags & PURPLE_MESSAGE_NO_LINKIFY)) {
 			const char *e = s+1;
 			/* try to find the end of this command, but not very well -- not sure what characters are valid and eventually will need to deal with spaces */
@@ -48,26 +53,27 @@ gchar *slack_html_to_message(SlackAccount *sa, const char *s, PurpleMessageFlags
 				continue;
 			}
 		}
-		if ((ent = purple_markup_unescape_entity(s, &len))) {
-			if (!strcmp(ent, "&"))
-				g_string_append(msg, "&amp;");
-			else if (!strcmp(ent, "<"))
-				g_string_append(msg, "&lt;");
-			else if (!strcmp(ent, ">"))
-				g_string_append(msg, "&gt;");
-			else
-				g_string_append(msg, ent);
-			s += len;
+		if (*s == '>') {
+			g_string_append(msg, "&gt;");
+			s++;
 			continue;
 		}
-		if (!g_ascii_strncasecmp(s, "<br>", 4)) {
-			g_string_append_c(msg, '\n');
-			s += 4;
+		if (*s == '<') {
+			g_string_append(msg, "&lt;");
+			s++;
 			continue;
 		}
-		/* what about other tags? urls (auto-detected server-side)? dates? */
+		if (*s == '&') {
+			g_string_append(msg, "&amp;");
+			s++;
+			continue;
+		}
 		g_string_append_c(msg, *s++);
 	}
+	
+	g_free(stripped);
+	g_free(marked);
+	g_free(escaped);
 
 	return g_string_free(msg, FALSE);
 }
@@ -162,6 +168,11 @@ void slack_message_to_html(GString *html, SlackAccount *sa, gchar *s, PurpleMess
 		}
 		s = r+1;
 	}
+	
+	
+	gchar *tmp = markdown_convert_markdown(html->str, FALSE, FALSE);
+	g_string_assign(html, tmp);
+	g_free(tmp);
 }
 
 /*
