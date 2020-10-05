@@ -25,6 +25,6 @@
 
 gchar *markdown_convert_markdown(const gchar *html, gboolean escape_html, gboolean markdown_hacks);
 gchar *markdown_escape_md(const gchar *markdown, gboolean markdown_hacks);
-gchar *markdown_html_to_markdown(gchar *html);
+const gchar *markdown_html_to_markdown(gchar *html);
 
 #endif
