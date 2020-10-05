@@ -93,7 +93,7 @@ void slack_conversation_retrieve(SlackAccount *sa, const char *sid, SlackConvers
 	SlackObject *obj = slack_conversation_lookup_sid(sa, sid);
 	if (obj)
 		return cb(sa, data, obj);
-	struct conversation_retrieve *lookup = g_new(struct conversation_retrieve, 1);
+	struct conversation_retrieve *lookup = g_new0(struct conversation_retrieve, 1);
 	lookup->cb = cb;
 	lookup->data = data;
 	slack_api_call(sa, conversation_retrieve_cb, lookup, "conversations.info", "channel", sid, NULL);

@@ -218,7 +218,7 @@ void slack_rtm_send(SlackAccount *sa, SlackRTMCallback *callback, gpointer user_
 	purple_debug_misc("slack", "RTM: %.*s\n", (int)json->len, json->str);
 
 	if (callback) {
-		SlackRTMCall *call = g_new(SlackRTMCall, 1);
+		SlackRTMCall *call = g_new0(SlackRTMCall, 1);
 		call->sa = sa;
 		call->callback = callback;
 		call->data = user_data;
