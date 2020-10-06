@@ -269,14 +269,14 @@ static void send_chat_free(struct send_chat *send) {
 	g_free(send);
 }
 
-static void send_chat_cb(SlackAccount *sa, gpointer data, json_value *json, const char *error) {
+static gboolean send_chat_cb(SlackAccount *sa, gpointer data, json_value *json, const char *error) {
 	struct send_chat *send = data;
 
 	/* XXX better way to present chat errors? */
 	if (error) {
 		purple_conv_present_error(send->chan->object.name, sa->account, error);
 		send_chat_free(send);
-		return;
+		return FALSE;
 	}
 
 	json_value *ts = json_get_prop(json, "ts");
@@ -296,6 +296,8 @@ static void send_chat_cb(SlackAccount *sa, gpointer data, json_value *json, cons
 	}
 
 	send_chat_free(send);
+	
+	return FALSE;
 }
 
 int slack_chat_send(PurpleConnection *gc, int cid, const char *msg, PurpleMessageFlags flags) {
@@ -315,11 +317,8 @@ int slack_chat_send(PurpleConnection *gc, int cid, const char *msg, PurpleMessag
 	send->cid = cid;
 	send->flags = flags;
 
-	GString *channel = append_json_string(g_string_new(NULL), chan->object.id);
-	GString *text = append_json_string(g_string_new(NULL), m);
-	slack_rtm_send(sa, send_chat_cb, send, "message", "channel", channel->str, "text", text->str, NULL);
-	g_string_free(channel, TRUE);
-	g_string_free(text, TRUE);
+	slack_api_call(sa, send_chat_cb, send, "chat.postMessage", "channel", chan->object.id, "type", "message", "as_user", "true", "text", m, NULL);
+	
 	g_free(m);
 
 	return 1;
