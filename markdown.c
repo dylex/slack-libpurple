@@ -226,7 +226,7 @@ markdown_convert_markdown(const gchar *html, gboolean escape_html, gboolean disc
 	html = markdown_helper_replace(html, "<" name ">", repl); \
 	html = markdown_helper_replace(html, "</" name ">", repl);
 
-const gchar *
+gchar *
 markdown_html_to_markdown(gchar *html)
 {
 	REPLACE_TAG("b", "*");
