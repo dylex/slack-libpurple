@@ -16,7 +16,7 @@ gchar *slack_html_to_message(SlackAccount *sa, const char *s, PurpleMessageFlags
 		return g_strdup(s);
 	
 	gchar *escaped = markdown_escape_md(s, FALSE);
-	const gchar *marked = markdown_html_to_markdown(escaped);
+	gchar *marked = markdown_html_to_markdown(escaped);
 	gchar *stripped = purple_markup_strip_html(marked);
 
 	s = stripped;
@@ -72,7 +72,7 @@ gchar *slack_html_to_message(SlackAccount *sa, const char *s, PurpleMessageFlags
 	}
 	
 	g_free(stripped);
-	g_free(escaped);
+	g_free(marked);
 
 	return g_string_free(msg, FALSE);
 }
