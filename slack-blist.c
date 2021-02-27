@@ -140,7 +140,7 @@ struct roomlist_expand {
 };
 
 #define ROOMLIST_CALL(sa, expand, ARGS...) \
-	slack_api_call(sa, roomlist_cb, expand, "conversations.list", "exclude_archived", expand->parent ? "false" : "true", "type", "public_channel,private_channel,mpim,im", SLACK_PAGINATE_LIMIT, ##ARGS, NULL)
+	slack_api_get(sa, roomlist_cb, expand, "conversations.list", "exclude_archived", expand->parent ? "false" : "true", "type", "public_channel,private_channel,mpim,im", SLACK_PAGINATE_LIMIT, ##ARGS, NULL)
 
 static gboolean roomlist_cb(SlackAccount *sa, gpointer data, json_value *json, const char *error) {
 	struct roomlist_expand *expand = data;

@@ -49,7 +49,7 @@ slack_auth_login_finduser_cb(SlackAccount *sa, gpointer user_data, json_value *j
 
 	/* now do the actual login */
 	slack_login_step(sa);
-	slack_api_call(sa, slack_auth_login_signin_cb,
+	slack_api_get(sa, slack_auth_login_signin_cb,
 		NULL, "auth.signin",
 		"user", user_id,
 		"password", purple_account_get_password(sa->account),
@@ -75,7 +75,7 @@ slack_auth_login_findteam_cb(SlackAccount *sa, gpointer user_data, json_value *j
 
 	/* now validate that the user exists and get their ID. */
 	slack_login_step(sa);
-	slack_api_call(sa, slack_auth_login_finduser_cb,
+	slack_api_get(sa, slack_auth_login_finduser_cb,
 		NULL, "auth.findUser",
 		"email", sa->email,
 		"team", sa->team.id,
@@ -86,7 +86,7 @@ slack_auth_login_findteam_cb(SlackAccount *sa, gpointer user_data, json_value *j
 void
 slack_auth_login(SlackAccount *sa) {
 	/* validate the team and get it's ID */
-	slack_api_call(sa, slack_auth_login_findteam_cb,
+	slack_api_get(sa, slack_auth_login_findteam_cb,
 		NULL, "auth.findTeam",
 		"domain", sa->host,
 		NULL);

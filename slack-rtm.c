@@ -230,5 +230,5 @@ void slack_rtm_send(SlackAccount *sa, SlackRTMCallback *callback, gpointer user_
 }
 
 void slack_rtm_connect(SlackAccount *sa) {
-	slack_api_call(sa, rtm_connect_cb, NULL, "rtm.connect", "batch_presence_aware", "1", "presence_sub", "true", NULL);
+	slack_api_get(sa, rtm_connect_cb, NULL, "rtm.connect", "batch_presence_aware", "1", "presence_sub", "true", NULL);
 }

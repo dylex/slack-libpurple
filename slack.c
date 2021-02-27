@@ -54,7 +54,7 @@ static GList *slack_status_types(G_GNUC_UNUSED PurpleAccount *acct) {
 
 static gboolean slack_set_profile(SlackAccount *sa, gpointer data, json_value *json, const char *error) {
 	GString *profile_json = data;
-	slack_api_call(sa, NULL, NULL, "users.profile.set", "profile", profile_json->str, NULL);
+	slack_api_post(sa, NULL, NULL, "users.profile.set", "profile", profile_json->str, NULL);
 	g_string_free(profile_json, TRUE);
 	return FALSE;
 }
@@ -79,7 +79,7 @@ static void slack_set_status(PurpleAccount *account, PurpleStatus *status) {
 		g_string_append(profile_json, "\"\"");
 	g_string_append(profile_json, ",\"status_emoji\":\"\"}");
 
-	slack_api_call(sa, slack_set_profile, profile_json, "users.setPresence", "presence", sa->away ? "away" : "auto", NULL);
+	slack_api_post(sa, slack_set_profile, profile_json, "users.setPresence", "presence", sa->away ? "away" : "auto", NULL);
 }
 
 static void slack_set_idle(PurpleConnection *gc, int idle) {

@@ -202,7 +202,7 @@ void slack_chat_open(SlackAccount *sa, SlackChannel *chan) {
 
 	serv_got_joined_chat(sa->gc, chan->cid, chan->object.name);
 
-	slack_api_call(sa, channels_info_cb, GINT_TO_POINTER(chan->type), chan->type >= SLACK_CHANNEL_GROUP ? "groups.info" : "channels.info", "channel", chan->object.id, NULL);
+	slack_api_get(sa, channels_info_cb, GINT_TO_POINTER(chan->type), chan->type >= SLACK_CHANNEL_GROUP ? "groups.info" : "channels.info", "channel", chan->object.id, NULL);
 }
 
 static gboolean channels_join_cb(SlackAccount *sa, gpointer data, json_value *json, const char *error) {
@@ -246,7 +246,7 @@ void slack_join_chat(PurpleConnection *gc, GHashTable *info) {
 	if (chan && chan->type >= SLACK_CHANNEL_MEMBER)
 		channels_join_cb(sa, join, NULL, NULL);
 	else
-		slack_api_call(sa, channels_join_cb, join, "channels.join", "name", name, NULL);
+		slack_api_post(sa, channels_join_cb, join, "channels.join", "name", name, NULL);
 }
 
 void slack_chat_leave(PurpleConnection *gc, int cid) {
@@ -357,7 +357,7 @@ void slack_chat_invite(PurpleConnection *gc, int cid, const char *message, const
 	if (!user)
 		return;
 
-	slack_api_call(sa, NULL, NULL, "conversations.invite", "channel", chan->object.id, "user", user->object.id, NULL);
+	slack_api_post(sa, NULL, NULL, "conversations.invite", "channel", chan->object.id, "user", user->object.id, NULL);
 }
 
 void slack_set_chat_topic(PurpleConnection *gc, int cid, const char *topic) {
@@ -367,5 +367,5 @@ void slack_set_chat_topic(PurpleConnection *gc, int cid, const char *topic) {
 	if (!chan)
 		return;
 
-	slack_api_call(sa, NULL, NULL, "conversations.setTopic", "channel", chan->object.id, "topic", topic, NULL);
+	slack_api_post(sa, NULL, NULL, "conversations.setTopic", "channel", chan->object.id, "topic", topic, NULL);
 }

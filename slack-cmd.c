@@ -76,7 +76,7 @@ static PurpleCmdRet send_cmd(PurpleConversation *conv, const gchar *cmd, gchar *
 	g_string_append(msg, cmd);
 
 	/* https://github.com/ErikKalkoken/slackApiDoc/blob/master/chat.command.md */
-	slack_api_call(sa, send_cmd_cb, conv, "chat.command", "channel", slack_conversation_id(obj), "command", msg->str, "text", args && args[0] ? args[0] : "", NULL);
+	slack_api_post(sa, send_cmd_cb, conv, "chat.command", "channel", slack_conversation_id(obj), "command", msg->str, "text", args && args[0] ? args[0] : "", NULL);
 	g_string_free(msg, TRUE);
 
 	return PURPLE_CMD_RET_OK;
@@ -93,7 +93,7 @@ static PurpleCmdRet cmd_edit(PurpleConversation *conv, const gchar *cmd, gchar *
 		return PURPLE_CMD_RET_FAILED;
 	}
 
-	slack_api_call(sa, NULL, NULL, "chat.update", "channel", slack_conversation_id(obj), "ts", obj->last_sent, "as_user", "true", "text", args && args[0] ? args[0] : "", NULL);
+	slack_api_post(sa, NULL, NULL, "chat.update", "channel", slack_conversation_id(obj), "ts", obj->last_sent, "as_user", "true", "text", args && args[0] ? args[0] : "", NULL);
 	return PURPLE_CMD_RET_OK;
 }
 
@@ -108,7 +108,7 @@ static PurpleCmdRet cmd_delete(PurpleConversation *conv, const gchar *cmd, gchar
 		return PURPLE_CMD_RET_FAILED;
 	}
 
-	slack_api_call(sa, NULL, NULL, "chat.delete", "channel", slack_conversation_id(obj), "ts", obj->last_sent, "as_user", "true", NULL);
+	slack_api_post(sa, NULL, NULL, "chat.delete", "channel", slack_conversation_id(obj), "ts", obj->last_sent, "as_user", "true", NULL);
 	return PURPLE_CMD_RET_OK;
 }
 

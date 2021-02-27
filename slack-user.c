@@ -111,7 +111,7 @@ static gboolean users_list_cb(SlackAccount *sa, gpointer data, json_value *json,
 
 	char *cursor = json_get_prop_strptr1(json_get_prop(json, "response_metadata"), "next_cursor");
 	if (cursor)
-		slack_api_call(sa, users_list_cb, NULL, "users.list", "presence", "false", SLACK_PAGINATE_LIMIT, "cursor", cursor, NULL);
+		slack_api_get(sa, users_list_cb, NULL, "users.list", "presence", "false", SLACK_PAGINATE_LIMIT, "cursor", cursor, NULL);
 	else
 		slack_login_step(sa);
 	return FALSE;
@@ -119,7 +119,7 @@ static gboolean users_list_cb(SlackAccount *sa, gpointer data, json_value *json,
 
 void slack_users_load(SlackAccount *sa) {
 	g_hash_table_remove_all(sa->users);
-	slack_api_call(sa, users_list_cb, NULL, "users.list", "presence", "false", SLACK_PAGINATE_LIMIT, NULL);
+	slack_api_get(sa, users_list_cb, NULL, "users.list", "presence", "false", SLACK_PAGINATE_LIMIT, NULL);
 }
 
 struct user_retrieve {
@@ -147,7 +147,7 @@ void slack_user_retrieve(SlackAccount *sa, const char *uid, SlackUserCallback *c
 	struct user_retrieve *lookup = g_new0(struct user_retrieve, 1);
 	lookup->cb = cb;
 	lookup->data = data;
-	slack_api_call(sa, user_retrieve_cb, lookup, "users.info", "user", uid, NULL);
+	slack_api_get(sa, user_retrieve_cb, lookup, "users.info", "user", uid, NULL);
 }
 
 static void presence_set(SlackAccount *sa, json_value *json, const char *presence) {
@@ -254,7 +254,7 @@ static gboolean users_info_cb(SlackAccount *sa, gpointer data, json_value *json,
 
 void slack_set_info(PurpleConnection *gc, const char *info) {
 	SlackAccount *sa = gc->proto_data;
-	slack_api_call(sa, NULL, NULL, "users.profile.set", "name", "status_text", "value", info, NULL);
+	slack_api_post(sa, NULL, NULL, "users.profile.set", "name", "status_text", "value", info, NULL);
 }
 
 void slack_get_info(PurpleConnection *gc, const char *who) {
@@ -263,7 +263,7 @@ void slack_get_info(PurpleConnection *gc, const char *who) {
 	if (!user)
 		users_info_cb(sa, g_strdup(who), NULL, NULL);
 	else
-		slack_api_call(sa, users_info_cb, g_strdup(who), "users.info", "user", user->object.id, NULL);
+		slack_api_get(sa, users_info_cb, g_strdup(who), "users.info", "user", user->object.id, NULL);
 }
 
 static void avatar_load_next(SlackAccount *sa);

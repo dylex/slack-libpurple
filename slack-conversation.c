@@ -15,7 +15,7 @@ static SlackObject *conversation_update(SlackAccount *sa, json_value *json) {
 }
 
 #define CONVERSATIONS_LIST_CALL(sa, ARGS...) \
-	slack_api_call(sa, conversations_list_cb, NULL, "conversations.list", "types", "public_channel,private_channel,mpim,im", "exclude_archived", "true", SLACK_PAGINATE_LIMIT, ##ARGS, NULL)
+	slack_api_get(sa, conversations_list_cb, NULL, "conversations.list", "types", "public_channel,private_channel,mpim,im", "exclude_archived", "true", SLACK_PAGINATE_LIMIT, ##ARGS, NULL)
 
 static gboolean conversations_list_cb(SlackAccount *sa, gpointer data, json_value *json, const char *error) {
 	json_value *chans = json_get_prop_type(json, "channels", array);
@@ -96,7 +96,7 @@ void slack_conversation_retrieve(SlackAccount *sa, const char *sid, SlackConvers
 	struct conversation_retrieve *lookup = g_new0(struct conversation_retrieve, 1);
 	lookup->cb = cb;
 	lookup->data = data;
-	slack_api_call(sa, conversation_retrieve_cb, lookup, "conversations.info", "channel", sid, NULL);
+	slack_api_get(sa, conversation_retrieve_cb, lookup, "conversations.info", "channel", sid, NULL);
 }
 
 static gboolean mark_conversation_timer(gpointer data) {
@@ -112,8 +112,7 @@ static gboolean mark_conversation_timer(gpointer data) {
 		obj->mark_next = NULL;
 		g_free(obj->last_mark);
 		obj->last_mark = g_strdup(obj->last_read);
-		/* XXX conversations.mark call??? */
-		slack_api_channel_call(sa, NULL, NULL, obj, "mark", "ts", obj->last_mark, NULL);
+		slack_api_post(sa, NULL, NULL, "conversations.mark", "channel", slack_conversation_id(obj), "ts", obj->last_mark, NULL);
 	}
 
 	return FALSE;
@@ -185,7 +184,7 @@ void slack_get_history(SlackAccount *sa, SlackObject *conv, const char *since, u
 
 	char count_buf[6] = "";
 	snprintf(count_buf, 5, "%u", count);
-	slack_api_call(sa, get_history_cb, g_object_ref(conv), "conversations.history", "channel", id, "oldest", since ?: "0", "limit", count_buf, NULL);
+	slack_api_get(sa, get_history_cb, g_object_ref(conv), "conversations.history", "channel", id, "oldest", since ?: "0", "limit", count_buf, NULL);
 }
 
 void slack_get_history_unread(SlackAccount *sa, SlackObject *conv, json_value *json) {
@@ -212,5 +211,5 @@ static gboolean get_conversation_unread_cb(SlackAccount *sa, gpointer data, json
 void slack_get_conversation_unread(SlackAccount *sa, SlackObject *conv) {
 	const char *id = slack_conversation_id(conv);
 	g_return_if_fail(id);
-	slack_api_call(sa, get_conversation_unread_cb, g_object_ref(conv), "conversations.info", "channel", id, NULL);
+	slack_api_get(sa, get_conversation_unread_cb, g_object_ref(conv), "conversations.info", "channel", id, NULL);
 }
