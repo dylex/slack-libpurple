@@ -143,9 +143,50 @@ static void join_channel_free(struct join_channel *join) {
 	g_free(join);
 }
 
+static gboolean channels_members_cb(SlackAccount *sa, gpointer data, json_value *json, const char *error) {
+	SlackChannel *chan = data;
+	purple_debug_misc("slack", "Adding members to %s\n", chan->object.id);
+	json_value *members = json_get_prop_type(json, "members", array);
+
+	if (!members || error) {
+		purple_debug_error("slack", "Error adding members to channel: %s\n", error ?: "missing");
+		return FALSE;
+	}
+
+	PurpleConvChat *conv = slack_channel_get_conversation(sa, chan);
+	if (!conv) {
+		purple_debug_error("slack", "Error finding conversation in channel: %s\n", chan->object.id);
+		return FALSE;
+	}
+
+	if (members) {
+		GList *users = NULL, *flags = NULL;
+		for (unsigned i = members->u.array.length; i; i --) {
+			SlackUser *user = (SlackUser*)slack_object_hash_table_lookup(sa->users, json_get_strptr(members->u.array.values[i-1]));
+			if (!user)
+				continue;
+			users = g_list_prepend(users, user->object.name);
+			PurpleConvChatBuddyFlags flag = PURPLE_CBFLAGS_VOICE;
+			flags = g_list_prepend(flags, GINT_TO_POINTER(flag));
+		}
+
+		purple_conv_chat_add_users(conv, users, NULL, flags, FALSE);
+		g_list_free(users);
+		g_list_free(flags);
+	}
+
+	// check to see if we need to fetch more pages
+	json_value *metadata = json_get_prop_type(json, "response_metadata", object);
+	char *next_cursor = json_get_prop_strptr(metadata, "next_cursor");
+	if (strcmp(next_cursor, "")) {
+		slack_api_get(sa, channels_members_cb, chan, "conversations.members", "channel", chan->object.id, "cursor", next_cursor, NULL);
+	}
+
+	return FALSE;
+}
+
 static gboolean channels_info_cb(SlackAccount *sa, gpointer data, json_value *json, const char *error) {
-	SlackChannelType type = GPOINTER_TO_INT(data);
-	json = json_get_prop_type(json, type >= SLACK_CHANNEL_GROUP ? "group" : "channel", object);
+	json = json_get_prop_type(json, "channel", object);
 
 	if (!json || error) {
 		purple_debug_error("slack", "Error loading channel info: %s\n", error ?: "missing");
@@ -164,26 +205,7 @@ static gboolean channels_info_cb(SlackAccount *sa, gpointer data, json_value *js
 		purple_conv_chat_set_topic(conv, topic_user ? topic_user->object.name : NULL, json_get_prop_strptr(json, "value"));
 	}
 
-	const char *creator = json_get_prop_strptr(json, "creator");
-
-	json_value *members = json_get_prop_type(json, "members", array);
-	if (members) {
-		GList *users = NULL, *flags = NULL;
-		for (unsigned i = members->u.array.length; i; i --) {
-			SlackUser *user = (SlackUser*)slack_object_hash_table_lookup(sa->users, json_get_strptr(members->u.array.values[i-1]));
-			if (!user)
-				continue;
-			users = g_list_prepend(users, user->object.name);
-			PurpleConvChatBuddyFlags flag = PURPLE_CBFLAGS_VOICE;
-			if (slack_object_id_is(user->object.id, creator))
-				flag |= PURPLE_CBFLAGS_FOUNDER;
-			flags = g_list_prepend(flags, GINT_TO_POINTER(flag));
-		}
-
-		purple_conv_chat_add_users(conv, users, NULL, flags, FALSE);
-		g_list_free(users);
-		g_list_free(flags);
-	}
+	slack_api_get(sa, channels_members_cb, chan, "conversations.members", "channel", chan->object.id, NULL);
 
 	if (purple_account_get_bool(sa->account, "get_history", FALSE)) {
 		slack_get_history_unread(sa, &chan->object, json);
@@ -202,7 +224,7 @@ void slack_chat_open(SlackAccount *sa, SlackChannel *chan) {
 
 	serv_got_joined_chat(sa->gc, chan->cid, chan->object.name);
 
-	slack_api_get(sa, channels_info_cb, GINT_TO_POINTER(chan->type), chan->type >= SLACK_CHANNEL_GROUP ? "groups.info" : "channels.info", "channel", chan->object.id, NULL);
+	slack_api_get(sa, channels_info_cb, GINT_TO_POINTER(chan->type), "conversations.info", "channel", chan->object.id, NULL);
 }
 
 static gboolean channels_join_cb(SlackAccount *sa, gpointer data, json_value *json, const char *error) {
@@ -246,7 +268,7 @@ void slack_join_chat(PurpleConnection *gc, GHashTable *info) {
 	if (chan && chan->type >= SLACK_CHANNEL_MEMBER)
 		channels_join_cb(sa, join, NULL, NULL);
 	else
-		slack_api_post(sa, channels_join_cb, join, "channels.join", "name", name, NULL);
+		slack_api_post(sa, channels_join_cb, join, "converstations.join", "name", name, NULL);
 }
 
 void slack_chat_leave(PurpleConnection *gc, int cid) {

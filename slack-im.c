@@ -172,7 +172,7 @@ int slack_send_im(PurpleConnection *gc, const char *who, const char *msg, Purple
 	send->flags = flags;
 
 	if (!*user->im)
-		slack_api_post(sa, send_im_open_cb, send, "im.open", "user", user->object.id, "return_im", "true", NULL);
+		slack_api_post(sa, send_im_open_cb, send, "converstations.open", "user", user->object.id, "return_im", "true", NULL);
 	else
 		send_im_open_cb(sa, send, NULL, NULL);
 
