@@ -12,7 +12,8 @@ C_SRCS = slack.c \
 	 slack-object.c \
 	 slack-json.c \
 	 purple-websocket.c \
-	 json.c
+	 json.c \
+	 markdown.c
 
 # Object file names using 'Substitution Reference'
 C_OBJS = $(C_SRCS:.c=.o)

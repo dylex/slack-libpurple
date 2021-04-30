@@ -161,10 +161,12 @@ int slack_send_im(PurpleConnection *gc, const char *who, const char *msg, Purple
 
 	gchar *m = slack_html_to_message(sa, msg, flags);
 	glong mlen = g_utf8_strlen(m, 16384);
-	if (mlen > 4000)
+	if (mlen > 4000) {
+		g_free(m);
 		return -E2BIG;
+	}
 
-	struct send_im *send = g_new(struct send_im, 1);
+	struct send_im *send = g_new0(struct send_im, 1);
 	send->user = g_object_ref(user);
 	send->msg = m;
 	send->flags = flags;

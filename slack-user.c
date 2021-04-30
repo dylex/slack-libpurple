@@ -144,7 +144,7 @@ void slack_user_retrieve(SlackAccount *sa, const char *uid, SlackUserCallback *c
 	SlackUser *user = (SlackUser *)slack_object_hash_table_lookup(sa->users, uid);
 	if (user)
 		return cb(sa, data, user);
-	struct user_retrieve *lookup = g_new(struct user_retrieve, 1);
+	struct user_retrieve *lookup = g_new0(struct user_retrieve, 1);
 	lookup->cb = cb;
 	lookup->data = data;
 	slack_api_get(sa, user_retrieve_cb, lookup, "users.info", "user", uid, NULL);

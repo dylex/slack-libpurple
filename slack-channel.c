@@ -330,10 +330,12 @@ int slack_chat_send(PurpleConnection *gc, int cid, const char *msg, PurpleMessag
 
 	gchar *m = slack_html_to_message(sa, msg, flags);
 	glong mlen = g_utf8_strlen(m, 16384);
-	if (mlen > 4000)
+	if (mlen > 4000) {
+		g_free(m);
 		return -E2BIG;
+	}
 
-	struct send_chat *send = g_new(struct send_chat, 1);
+	struct send_chat *send = g_new0(struct send_chat, 1);
 	send->chan = g_object_ref(chan);
 	send->cid = cid;
 	send->flags = flags;

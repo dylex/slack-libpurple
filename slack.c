@@ -189,6 +189,10 @@ static void slack_login(PurpleAccount *account) {
 	if(token != NULL && g_str_has_prefix(token, "xoxp-")) {
 		legacy_token = TRUE;
 	}
+	
+	gc->flags |= PURPLE_CONNECTION_HTML;
+	gc->flags |= PURPLE_CONNECTION_NO_FONTSIZE;
+	gc->flags |= PURPLE_CONNECTION_NO_BGCOLOR;
 
 	static gboolean signals_connected = FALSE;
 	if (!signals_connected) {
