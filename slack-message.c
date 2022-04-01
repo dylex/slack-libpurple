@@ -83,7 +83,7 @@ void slack_message_to_html(GString *html, SlackAccount *sa, gchar *s, PurpleMess
 	if (flags)
 		*flags |= PURPLE_MESSAGE_NO_LINKIFY;
 
-	gchar * orginal_string = s;
+	gchar * original_string = s;
 	size_t l = strlen(s);
 	char *end = &s[l];
 
