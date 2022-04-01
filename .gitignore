@@ -3,3 +3,4 @@
 *.so
 /Makefile.dep
 .vscode
+/python/**/
