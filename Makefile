@@ -13,7 +13,9 @@ C_SRCS = slack.c \
 	 slack-object.c \
 	 slack-json.c \
 	 purple-websocket.c \
-	 json.c
+	 json.c \
+	 slack-emoji.c \
+	 slack-util.c
 
 # Object file names using 'Substitution Reference'
 C_OBJS = $(C_SRCS:.c=.o)
@@ -45,7 +47,7 @@ CFLAGS = \
     -std=c99 \
 	-I$(PIDGIN_TREE_TOP)/libpurple \
 	-I$(WIN32_DEV_TOP)/glib-2.28.8/include -I$(WIN32_DEV_TOP)/glib-2.28.8/include/glib-2.0 -I$(WIN32_DEV_TOP)/glib-2.28.8/lib/glib-2.0/include
-LIBS = -L$(WIN32_DEV_TOP)/glib-2.28.8/lib -L$(PIDGIN_TREE_TOP)/libpurple -lpurple -lintl -lglib-2.0 -lgobject-2.0 -g -ggdb -static-libgcc -lz -lws2_32 
+LIBS = -L$(WIN32_DEV_TOP)/glib-2.28.8/lib -L$(PIDGIN_TREE_TOP)/libpurple -lpurple -lintl -lglib-2.0 -lgobject-2.0 -g -ggdb -static-libgcc -lz -lws2_32
 
 else
 

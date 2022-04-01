@@ -24,6 +24,7 @@ void slack_write_message(SlackAccount *sa, SlackObject *obj, const char *html, P
  */
 void slack_handle_message(SlackAccount *sa, SlackObject *conv, json_value *json, PurpleMessageFlags flags, gboolean force_threads);
 
+void slack_all_html_text_replacement(GString *html, const char *text);
 /* RTM event handlers */
 gboolean slack_message(SlackAccount *sa, json_value *json);
 void slack_user_typing(SlackAccount *sa, json_value *json);

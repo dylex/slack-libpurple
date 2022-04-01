@@ -10,6 +10,8 @@
 #include "slack-conversation.h"
 #include "slack-message.h"
 #include "slack-thread.h"
+#include "slack-emoji.h"
+#include "slack-util.h"
 
 gchar *slack_html_to_message(SlackAccount *sa, const char *s, PurpleMessageFlags flags) {
 
@@ -81,6 +83,7 @@ void slack_message_to_html(GString *html, SlackAccount *sa, gchar *s, PurpleMess
 	if (flags)
 		*flags |= PURPLE_MESSAGE_NO_LINKIFY;
 
+	char * start = s;
 	size_t l = strlen(s);
 	char *end = &s[l];
 
@@ -88,7 +91,7 @@ void slack_message_to_html(GString *html, SlackAccount *sa, gchar *s, PurpleMess
 		char c = *s++;
 		if (c == '\n') {
 			g_string_append(html, "<BR>");
-			
+
 			// This is here for attachments.  If this message is part of an attachment,
 			// we must add the preprend string after every newline.
 			if (prepend_newline_str) {
@@ -96,6 +99,7 @@ void slack_message_to_html(GString *html, SlackAccount *sa, gchar *s, PurpleMess
 			}
 			continue;
 		}
+
 		if (c != '<') {
 			g_string_append_c(html, c);
 			continue;
@@ -164,6 +168,30 @@ void slack_message_to_html(GString *html, SlackAccount *sa, gchar *s, PurpleMess
 		}
 		s = r+1;
 	}
+	purple_debug_info("slack", "HTML done\n");
+	//Do emoji string replacement
+	GRegex * regex = NULL;
+	GMatchInfo * match_info = NULL;
+	regex = g_regex_new(":(?:[^:\\s]|::)*:", 0, 0, NULL);
+	//regex = g_regex_new(".*", G_REGEX_CASELESS, 0, NULL);
+	int result = g_regex_match(regex, start, 0, &match_info);
+	purple_debug_info("slack", "Result: %d", result);
+
+	while (g_match_info_matches(match_info)) {
+		gchar *match = g_match_info_fetch(match_info, 0);
+		//Get characters after the first and before the last
+		char * emoji_name = g_strndup(match+1, strlen(match)-2);
+		purple_debug_info("slack", "Emoji name: %s\n", emoji_name);
+		int wc = get_unicode_from_emoji_short(emoji_name);
+		//Take wc and convert to utf8
+		GString * emoji_string = g_string_new("");
+		g_string_append_unichar(emoji_string, wc);
+		g_string_replace_bp(html, match, emoji_string->str);
+
+		g_free(match);
+		//g_string_append_unichar(html, wc);
+		g_match_info_next(match_info, NULL);
+	}
 }
 
 /*
@@ -211,13 +239,13 @@ static void slack_attachment_to_html(GString *html, SlackAccount *sa, json_value
 	char *service_link = json_get_prop_strptr(attachment, "service_link");
 	char *author_name = json_get_prop_strptr(attachment, "author_name");
 	char *author_subname = json_get_prop_strptr(attachment, "author_subname");
-	
+
 	char *author_link = json_get_prop_strptr(attachment, "author_link");
 	char *text = json_get_prop_strptr(attachment, "text");
 
 	//char *fallback = json_get_prop_strptr(attachment, "fallback");
 	char *pretext = json_get_prop_strptr(attachment, "pretext");
-	
+
 	char *title = json_get_prop_strptr(attachment, "title");
 	char *title_link = json_get_prop_strptr(attachment, "title_link");
 	char *footer = json_get_prop_strptr(attachment, "footer");
@@ -336,9 +364,10 @@ static void slack_file_to_html(GString *html, SlackAccount *sa, json_value *file
 }
 
 void slack_json_to_html(GString *html, SlackAccount *sa, json_value *message, PurpleMessageFlags *flags) {
+	purple_debug_info("slack", "message: %s\n", message->u.string.ptr);
 	const char *subtype = json_get_prop_strptr(message, "subtype");
 	int i;
-	
+
 	if (flags && json_get_prop_boolean(message, "hidden", FALSE))
 		*flags |= PURPLE_MESSAGE_INVISIBLE;
 
@@ -505,7 +534,7 @@ void slack_handle_message(SlackAccount *sa, SlackObject *obj, json_value *json, 
 					!strcmp(subtype, "group_topic"))
 				purple_conv_chat_set_topic(chat, user ? user->object.name : user_id, json_get_prop_strptr(json, "topic"));
 		}
-		
+
 		serv_got_chat_in(sa->gc, chan->cid, user ? user->object.name : user_id ?: username ?: "", flags, html->str, mt);
 	} else if (SLACK_IS_USER(obj)) {
 		SlackUser *im = (SlackUser*)obj;
@@ -553,7 +582,7 @@ static gboolean slack_unset_typing_cb(SlackChatBuddy *chatbuddy) {
 	if (cb) {
 		purple_conv_chat_user_set_flags(chatbuddy->chat, chatbuddy->name, cb->flags & ~PURPLE_CBFLAGS_TYPING);
 	}
-	
+
 	g_free(chatbuddy->name);
 	chatbuddy->name = NULL;
 	return FALSE;
@@ -574,7 +603,7 @@ void slack_user_typing(SlackAccount *sa, json_value *json) {
 		PurpleConvChatBuddy *cb = chat ? purple_conv_chat_cb_find(chat, user->object.name) : NULL;
 		if (cb) {
 			purple_conv_chat_user_set_flags(chat, user->object.name, cb->flags | PURPLE_CBFLAGS_TYPING);
-			
+
 			guint timeout = GPOINTER_TO_UINT(g_dataset_get_data(user, "typing_timeout"));
 			SlackChatBuddy *chatbuddy = g_dataset_get_data(user, "chatbuddy");
 			if (timeout) {
@@ -588,7 +617,7 @@ void slack_user_typing(SlackAccount *sa, json_value *json) {
 			chatbuddy->chat = chat;
 			chatbuddy->name = g_strdup(user->object.name);
 			timeout = purple_timeout_add_seconds(4, (GSourceFunc)slack_unset_typing_cb, chatbuddy);
-			
+
 			g_dataset_set_data(user, "typing_timeout", GUINT_TO_POINTER(timeout));
 			g_dataset_set_data(user, "chatbuddy", chatbuddy);
 		}
