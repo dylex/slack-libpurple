@@ -83,7 +83,7 @@ void slack_message_to_html(GString *html, SlackAccount *sa, gchar *s, PurpleMess
 	if (flags)
 		*flags |= PURPLE_MESSAGE_NO_LINKIFY;
 
-	char * start = s;
+	gchar * orginal_string = s;
 	size_t l = strlen(s);
 	char *end = &s[l];
 
@@ -168,30 +168,8 @@ void slack_message_to_html(GString *html, SlackAccount *sa, gchar *s, PurpleMess
 		}
 		s = r+1;
 	}
-	purple_debug_info("slack", "HTML done\n");
 	//Do emoji string replacement
-	GRegex * regex = NULL;
-	GMatchInfo * match_info = NULL;
-	regex = g_regex_new(":(?:[^:\\s]|::)*:", 0, 0, NULL);
-	//regex = g_regex_new(".*", G_REGEX_CASELESS, 0, NULL);
-	int result = g_regex_match(regex, start, 0, &match_info);
-	purple_debug_info("slack", "Result: %d", result);
-
-	while (g_match_info_matches(match_info)) {
-		gchar *match = g_match_info_fetch(match_info, 0);
-		//Get characters after the first and before the last
-		char * emoji_name = g_strndup(match+1, strlen(match)-2);
-		purple_debug_info("slack", "Emoji name: %s\n", emoji_name);
-		int wc = get_unicode_from_emoji_short(emoji_name);
-		//Take wc and convert to utf8
-		GString * emoji_string = g_string_new("");
-		g_string_append_unichar(emoji_string, wc);
-		g_string_replace_bp(html, match, emoji_string->str);
-
-		g_free(match);
-		//g_string_append_unichar(html, wc);
-		g_match_info_next(match_info, NULL);
-	}
+	replace_emoji_short_names(html, original_string);
 }
 
 /*
