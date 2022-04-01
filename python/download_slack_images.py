@@ -16,7 +16,7 @@ def run():
                     url = f"https://a.slack-edge.com/production-standard-emoji-assets/13.0/google-{size}/{unicode_point.lower()}.png"
                     print(url + '\n')
                     try:
-                        urllib.request.urlretrieve(url, f'{size}/{unicode_point}.png')
+                        urllib.request.urlretrieve(url, f'slack-{size}/{unicode_point}.png')
                     except:
                         print(f'Failed to download {url}\n')
 

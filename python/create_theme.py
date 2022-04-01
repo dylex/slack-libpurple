@@ -26,7 +26,7 @@ def create_pidgin_theme_file():
 
 
     for size in ['medium', 'large']:
-        with open(f'{size}/theme', 'w') as f:
+        with open(f'slack-{size}/theme', 'w') as f:
             f.write('\n'.join(begin_text))
             f.write('\n')
             f.write('\n'.join(emoji_lines))
