@@ -7,13 +7,14 @@
 
 json_value * emoji_json_data = NULL;
 
-void load_emoji_data(const gchar* file_name) {
+//It would be smart to move this operation to some place where it will not be repeatedly run on every instance.
+
+void slack_load_emoji_data(const gchar* file_name) {
     char * file_contents;
     int file_size;
     FILE *fp;
 
     json_char* json;
-    json_value* value;
 
 
     fp = fopen(file_name, "r");
@@ -57,12 +58,11 @@ void load_emoji_data(const gchar* file_name) {
     }
 }
 
-void unloaded_emoji_data() {
+void slack_unload_emoji_data() {
     json_value_free(emoji_json_data);
 }
 
 int get_unicode_from_emoji_short(const char *short_name ) {
-    load_emoji_data("simple_emoji.json");
     json_value * emoji = json_get_prop(emoji_json_data, short_name);
 
     if (emoji == NULL || emoji->type != json_object) {
@@ -74,7 +74,6 @@ int get_unicode_from_emoji_short(const char *short_name ) {
     //Convert the string to hex
     int unicode_point = strtol(unicode_value, NULL, 16);
 
-    unload_emoji_data();
     return unicode_point;
 
 }

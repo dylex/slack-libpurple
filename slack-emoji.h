@@ -3,8 +3,8 @@
 #include "json.h"
 
 
-void load_emoji_data(const gchar* file_name);
-void unload_emoji_data();
+void slack_load_emoji_data(const gchar* file_name);
+void slack_unload_emoji_data();
 int get_unicode_from_emoji_short(const char *short_name);
 void replace_emoji_short_names(GString *html, gchar * s);
 

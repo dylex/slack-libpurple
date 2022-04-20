@@ -14,6 +14,7 @@
 #include "slack-auth.h"
 #include "slack-rtm.h"
 #include "slack-json.h"
+#include "slack-emoji.h"
 #include "slack-user.h"
 #include "slack-im.h"
 #include "slack-channel.h"
@@ -143,14 +144,14 @@ static void slack_conversation_created(PurpleConversation *conv, void *data) {
 static guint slack_conversation_send_typing(PurpleConversation *conv, PurpleTypingState state, gpointer userdata)
 {
 	PurpleConnection *gc = purple_conversation_get_gc(conv);
-	
+
 	if (!gc || !PURPLE_CONNECTION_IS_CONNECTED(gc)) {
 		return 0;
 	}
 	if (!purple_strequal(purple_plugin_get_id(purple_connection_get_prpl(gc)), SLACK_PLUGIN_ID)) {
 		return 0;
 	}
-	
+
 	SlackAccount *sa = gc->proto_data;
 
 	if (state != PURPLE_TYPING)
@@ -166,7 +167,7 @@ static guint slack_conversation_send_typing(PurpleConversation *conv, PurpleTypi
 	else */
 		slack_rtm_send(sa, NULL, NULL, "typing", "channel", channel->str, NULL);
 	g_string_free(channel, TRUE);
-	
+
 	return 3;
 }
 
@@ -199,7 +200,7 @@ static void slack_login(PurpleAccount *account) {
 				gc->prpl, PURPLE_CALLBACK(slack_conversation_created), NULL);
 		purple_signal_connect(purple_conversations_get_handle(), "conversation-updated",
 				gc->prpl, PURPLE_CALLBACK(slack_conversation_updated), NULL);
-		purple_signal_connect(purple_conversations_get_handle(), "chat-conversation-typing", 
+		purple_signal_connect(purple_conversations_get_handle(), "chat-conversation-typing",
 				gc->prpl, PURPLE_CALLBACK(slack_conversation_send_typing), NULL);
 	}
 
@@ -341,6 +342,8 @@ void slack_login_step(SlackAccount *sa) {
 		case 6: /* rtm_msg("hello") */
 			lazy = purple_account_get_bool(sa->account, "lazy_load", FALSE);
 			MSG("Loading Users");
+			//The emoji lists parsing is expensive, so we load it upon login. Its unloaded upon application close.
+    		slack_load_emoji_data("simple_emoji.json");
 			if (!lazy) {
 				slack_users_load(sa);
 				break;
@@ -358,6 +361,7 @@ void slack_login_step(SlackAccount *sa) {
 		case 9:
 			slack_presence_sub(sa);
 			purple_connection_set_state(sa->gc, PURPLE_CONNECTED);
+			break;
 	}
 #undef MSG
 }
@@ -383,6 +387,9 @@ static void slack_close(PurpleConnection *gc) {
 		purple_websocket_abort(sa->rtm);
 		sa->rtm = NULL;
 	}
+
+	slack_unload_emoji_data();
+
 	g_hash_table_destroy(sa->rtm_call);
 
 	slack_api_disconnect(sa);
@@ -462,7 +469,7 @@ static PurplePluginProtocolInfo prpl_info = {
 	NULL,			/* rem_permit */
 	NULL,			/* rem_deny */
 	NULL,			/* set_permit_deny */
-	slack_join_chat,	/* join_chat */	
+	slack_join_chat,	/* join_chat */
 	NULL,			/* reject chat invite */
 	slack_get_chat_name,	/* get_chat_name */
 	slack_chat_invite,	/* chat_invite */
