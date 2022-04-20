@@ -2,14 +2,6 @@ import json
 
 
 def create_pidgin_theme_file():
-    begin_text = [
-        "Name=Slack",
-        "Description=Slack Emojis ported to pidgin",
-        "Icon=1F40C.png",
-        "Author=Slack",
-        "",
-        "[default]"
-    ]
     emoji_lines = []
     data = json.load(open('emoji_pretty.json', 'r'))
     for emoji in data:
@@ -26,6 +18,15 @@ def create_pidgin_theme_file():
 
 
     for size in ['medium', 'large']:
+        begin_text = [
+            "Name=Slack {size}",
+            "Description=Slack Emojis ported to pidgin",
+            "Icon=1F600.png",
+            "Author=Slack",
+            "",
+            "[default]"
+        ]
+
         with open(f'slack-{size}/theme', 'w') as f:
             f.write('\n'.join(begin_text))
             f.write('\n')
