@@ -5,12 +5,9 @@
 #include "slack-emoji.h"
 #include "slack-util.h"
 
-#include <stdio.h>
+json_value * emoji_json_data = NULL;
 
-
-int get_unicode_from_emoji_short(const char *short_name ) {
-    //Open the json file containing the emoji list
-    const char * file_name = "simple_emoji.json";
+void load_emoji_data(const gchar* file_name) {
     char * file_contents;
     int file_size;
     FILE *fp;
@@ -23,7 +20,6 @@ int get_unicode_from_emoji_short(const char *short_name ) {
 
     if (fp == NULL) {
         purple_debug_error("slack", "Could not open emoji file:  %s\n", file_name);
-        //Replace with purple debug later
         fclose(fp);
         return;
     }
@@ -32,51 +28,53 @@ int get_unicode_from_emoji_short(const char *short_name ) {
     file_size = ftell(fp);
     rewind(fp);
     purple_debug_info("slack", "Emoji Data File size: %d\n", file_size);
-    ////Allocate the memory to contain the whole file
+    //Allocate the memory to contain the whole file
+    // Ideally this should happen only once on program load.
     file_contents = (char*)malloc(file_size);
-    //file_contents[file_size] = "\0";
 
     if (fread(file_contents, file_size, 1, fp) != 1) {
         purple_debug_error("slack", "Could not read emoji file:  %s\n", file_name);
-        //Replace with purple debug later
-        //fprintf(stderr, "Error reading simple_emoji.json\n");
         fclose(fp);
         free(file_contents);
         return;
     }
     json = (json_char*)file_contents;
-    value = json_parse(json, file_size);
+    emoji_json_data = json_parse(json, file_size);
+    free(file_contents);
+    fclose(fp);
 
-    if (value == NULL) {
+    if (emoji_json_data == NULL) {
         purple_debug_error("slack", "Could not parse emoji file:  %s\n", file_name);
-        //Replace with purple debug later
-        fclose(fp);
         free(file_contents);
+        json_value_free(emoji_json_data);
         return;
     }
     //Value should be an object
-    if (value->type != json_object) {
+    if (emoji_json_data->type != json_object) {
         purple_debug_error("slack", "Emoji file is not an object:  %s\n", file_name);
-        //Replace with purple debug later
-        fclose(fp);
-        free(file_contents);
+        json_value_free(emoji_json_data);
         return;
     }
+}
 
-    json_value * emoji = json_get_prop(value, short_name);
+void unloaded_emoji_data() {
+    json_value_free(emoji_json_data);
+}
+
+int get_unicode_from_emoji_short(const char *short_name ) {
+    load_emoji_data("simple_emoji.json");
+    json_value * emoji = json_get_prop(emoji_json_data, short_name);
+
     if (emoji == NULL || emoji->type != json_object) {
         purple_debug_error("slack", "Could not find emoji:  %s\n", short_name);
-        //Replace with purple debug later
-        fclose(fp);
-        free(file_contents);
-        return;
+        return 1;
     }
     char * unicode_value = json_get_prop_strptr(emoji, "unified");
     purple_debug_info("slack", "Unicode value: %s\n", unicode_value);
     //Convert the string to hex
     int unicode_point = strtol(unicode_value, NULL, 16);
 
-    json_value_free(value);
+    unload_emoji_data();
     return unicode_point;
 
 }
@@ -84,6 +82,10 @@ int get_unicode_from_emoji_short(const char *short_name ) {
 void replace_emoji_short_names(GString *html, gchar* s) {
     GRegex * regex = NULL;
 	GMatchInfo * match_info = NULL;
+
+
+    //This regular expressions purpose is to find all emoji short names in the format :emoji-name:
+    //The short name is then replaced with the found unicode value.
 	regex = g_regex_new(":(?:[^:\\s]|::)*:", 0, 0, NULL);
 	int result = g_regex_match(regex, s, 0, &match_info);
 	purple_debug_info("slack", "Result: %d", result);
@@ -93,14 +95,17 @@ void replace_emoji_short_names(GString *html, gchar* s) {
 		//Get characters after the first and before the last
 		char * emoji_name = g_strndup(match+1, strlen(match)-2);
 		purple_debug_info("slack", "Emoji name: %s\n", emoji_name);
-		int wc = get_unicode_from_emoji_short(emoji_name);
-		//Take wc and convert to utf8
-		GString * emoji_string = g_string_new("");
-		g_string_append_unichar(emoji_string, wc);
-		g_string_replace_bp(html, match, emoji_string->str);
+        //Later it would be usefull to have some function that determines whether the emoji is unicode or not.
+        //If its  not this is where the image replacement functionality could come in.
 
+		int unicode_emoji = get_unicode_from_emoji_short(emoji_name);
+		//Take unicode point and convert to utf8
+		GString * emoji_string = g_string_new("");
+		g_string_append_unichar(emoji_string, unicode_emoji);
+		g_string_replace_bp(html, match, emoji_string->str);
+        //Remove the allocated string for the match text.
 		g_free(match);
-		//g_string_append_unichar(html, wc);
+        //Go to the next available match if there isnt one the match_info will become NULL.
 		g_match_info_next(match_info, NULL);
 	}
 }
