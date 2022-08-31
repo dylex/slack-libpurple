@@ -64,6 +64,7 @@ Here's how slack concepts are mapped to purple:
 - `/delete`: remove your last message
 - `/thread|th [thread-timestamp] [message]`: post `message` in a thread, where `thread-timestamp` matches the configured display format (either `thread_timestamp` or `thread_datestamp`)
 - `/getthread|gth [thread-timestamp]`: fetch messages in a thread, where `thread-timestamp` matches the configured display format (either `thread_timestamp` or `thread_datestamp`)
+- `/call`: start a new call
 
 ## Known issues
 - Handling of messages while not connected or not open is not great.

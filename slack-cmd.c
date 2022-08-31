@@ -128,6 +128,23 @@ static PurpleCmdRet cmd_delete(PurpleConversation *conv, const gchar *cmd, gchar
 	return PURPLE_CMD_RET_OK;
 }
 
+static PurpleCmdRet cmd_startcall(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data) {
+	SlackAccount *sa = get_slack_account(conv->account);
+	if (!sa)
+		return PURPLE_CMD_RET_FAILED;
+
+	SlackObject *obj = slack_conversation_get_conversation(sa, conv);
+	if (!obj) {
+		return PURPLE_CMD_RET_FAILED;
+	}
+
+	gchar *url = g_strconcat("https://app.slack.com/free-willy/", sa->team.id, "/", slack_conversation_id(obj), NULL);
+	slack_write_message(sa, obj, url, PURPLE_MESSAGE_SEND);
+	g_free(url);
+
+	return PURPLE_CMD_RET_OK;
+}
+
 static PurpleCmdRet cmd_thread(PurpleConversation *conv, const gchar *cmd, gchar **args, gchar **error, void *data) {
 	SlackAccount *sa = get_slack_account(conv->account);
 	if (!sa)
@@ -190,6 +207,10 @@ void slack_cmd_register() {
 
 	id = purple_cmd_register("delete", "", PURPLE_CMD_P_PRPL, PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
 			SLACK_PLUGIN_ID, cmd_delete, "delete: remove your last message", NULL);
+	commands = g_slist_prepend(commands, GUINT_TO_POINTER(id));
+
+	id = purple_cmd_register("call", "", PURPLE_CMD_P_PRPL, PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_CHAT | PURPLE_CMD_FLAG_PRPL_ONLY,
+			SLACK_PLUGIN_ID, cmd_startcall, "call", NULL);
 	commands = g_slist_prepend(commands, GUINT_TO_POINTER(id));
 
 	static const char *thread_cmds[] = {"thread", "th", NULL};
