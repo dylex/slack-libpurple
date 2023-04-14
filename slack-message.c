@@ -568,18 +568,18 @@ gboolean slack_message(SlackAccount *sa, json_value *json) {
 }
 
 typedef struct {
-	PurpleConvChat *chat;
+	SlackAccount *sa;
+	SlackChannel *chan;
 	gchar *name;
 } SlackChatBuddy;
 
 static gboolean slack_unset_typing_cb(SlackChatBuddy *chatbuddy) {
-	PurpleConvChatBuddy *cb = purple_conv_chat_cb_find(chatbuddy->chat, chatbuddy->name);
+	PurpleConvChat *chat = slack_channel_get_conversation(chatbuddy->sa, chatbuddy->chan);
+	PurpleConvChatBuddy *cb = chat ? purple_conv_chat_cb_find(chat, chatbuddy->name) : NULL;
 	if (cb) {
-		purple_conv_chat_user_set_flags(chatbuddy->chat, chatbuddy->name, cb->flags & ~PURPLE_CBFLAGS_TYPING);
+		purple_conv_chat_user_set_flags(chat, chatbuddy->name, cb->flags & ~PURPLE_CBFLAGS_TYPING);
 	}
-	
-	g_free(chatbuddy->name);
-	chatbuddy->name = NULL;
+
 	return FALSE;
 }
 
@@ -605,11 +605,15 @@ void slack_user_typing(SlackAccount *sa, json_value *json) {
 				purple_timeout_remove(timeout);
 				if (chatbuddy) {
 					g_free(chatbuddy->name);
+					chatbuddy->name = NULL;
+					chatbuddy->sa = NULL;
+					chatbuddy->chan = NULL;
 					g_free(chatbuddy);
 				}
 			}
 			chatbuddy = g_new0(SlackChatBuddy, 1);
-			chatbuddy->chat = chat;
+			chatbuddy->sa = sa;
+			chatbuddy->chan = chan;
 			chatbuddy->name = g_strdup(user->object.name);
 			timeout = purple_timeout_add_seconds(4, (GSourceFunc)slack_unset_typing_cb, chatbuddy);
 			
