@@ -12,11 +12,24 @@ C_SRCS = slack.c \
 	 slack-api.c \
 	 slack-object.c \
 	 slack-json.c \
+	 slack-emoji.c \
 	 purple-websocket.c \
 	 json.c
 
+RESOURCES_XMLS = slack-emoji.gresource.xml
+RESOURCES_C_SRCS = $(RESOURCES_XMLS:.gresource.xml=-resource.c)
+RESOURCES_C_HDRS = $(RESOURCES_XMLS:.gresource.xml=-resource.h)
+
+C_SRCS += $(RESOURCES_C_SRCS)
+
 # Object file names using 'Substitution Reference'
 C_OBJS = $(C_SRCS:.c=.o)
+
+%-resource.c: %.gresource.xml %-resource.h
+	glib-compile-resources --internal --generate $< --target $@
+
+%-resource.h: %.gresource.xml
+	glib-compile-resources --internal --generate $< --target $@
 
 PURPLE_MOD=purple
 
@@ -53,7 +66,7 @@ LIBNAME=libslack.so
 
 PLUGIN_DIR_PURPLE:=$(DESTDIR)$(shell pkg-config --variable=plugindir $(PURPLE_MOD))
 DATA_ROOT_DIR_PURPLE:=$(DESTDIR)$(shell pkg-config --variable=datarootdir $(PURPLE_MOD))
-PKGS=$(PURPLE_MOD) glib-2.0 gobject-2.0
+PKGS=$(PURPLE_MOD) glib-2.0 gobject-2.0 gio-2.0
 
 CFLAGS = \
     -g \
@@ -118,5 +131,15 @@ modversion:
 
 Makefile.dep: $(C_SRCS)
 	$(CC) -MM $(CFLAGS) $^ > Makefile.dep
+
+
+test-slack-emoji: test-slack-emoji.c slack-emoji.o json.o slack-json.o $(RESOURCES_C_SRCS)
+	$(CC) -o $@ \
+	    $(shell pkg-config --cflags --libs $(PKGS)) \
+	    -lm $^
+
+.PHONY: test
+test: test-slack-emoji
+	for i in $< ; do ./$$i ; done
 
 include Makefile.dep
