@@ -8,6 +8,7 @@
 #include "glibcompat.h"
 #include "purple-websocket.h"
 #include "slack-object.h"
+#include "slack-emoji.h"
 
 #define SLACK_PLUGIN_ID "prpl-slack"
 
@@ -47,6 +48,8 @@ typedef struct _SlackAccount {
 	PurpleGroup *blist; /* default group for ims/channels */
 	GHashTable *buddies; /* char *slack_id -> PurpleBListNode */
 	gboolean roomlist_stop;
+
+	SlackEmojiContext *emoji_ctx;
 
 	guint mark_timer;
 	SlackObject *mark_list;

@@ -3,3 +3,6 @@
 *.so
 /Makefile.dep
 .vscode
+*.gresource
+*~
+test-slack-emoji

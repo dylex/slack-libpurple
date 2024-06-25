@@ -274,6 +274,8 @@ static void slack_login(PurpleAccount *account) {
 
 	sa->buddies = g_hash_table_new_full(/* slack_object_id_hash, slack_object_id_equal, */ g_str_hash, g_str_equal, NULL, NULL);
 
+	sa->emoji_ctx = slack_emoji_new();
+
 	sa->mark_list = MARK_LIST_END;
 
 	purple_connection_set_display_name(gc, account->alias ?: account->username);
@@ -396,6 +398,8 @@ static void slack_close(PurpleConnection *gc) {
 	g_hash_table_destroy(sa->ims);
 	g_hash_table_destroy(sa->user_names);
 	g_hash_table_destroy(sa->users);
+
+	slack_emoji_free(sa->emoji_ctx);
 
 #if GLIB_CHECK_VERSION(2,60,0)
 	g_queue_clear_full(&sa->avatar_queue, g_object_unref);

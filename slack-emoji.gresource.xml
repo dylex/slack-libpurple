@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/im/pidgin/plugins/slack-libpurple">
+    <file>weemoji.json</file>
+  </gresource>
+</gresources>
