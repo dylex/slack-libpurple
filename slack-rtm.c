@@ -187,8 +187,15 @@ static gboolean rtm_connect_cb(SlackAccount *sa, gpointer data, json_value *json
 	slack_blist_init(sa);
 
 	slack_login_step(sa);
+
+	gchar *cookie = NULL;
+	if (sa->d_cookie)
+		cookie = g_strconcat("d=", sa->d_cookie, NULL);
+
 	purple_debug_info("slack", "RTM URL: %s\n", url);
-	sa->rtm = purple_websocket_connect(sa->account, url, NULL, rtm_cb, sa);
+	sa->rtm = purple_websocket_connect(sa->account, url, NULL, cookie, rtm_cb, sa);
+
+	g_free(cookie);
 
 	sa->ping_timer = purple_timeout_add_seconds(60, ping_timer, sa);
 	return FALSE;
@@ -232,5 +239,5 @@ void slack_rtm_send(SlackAccount *sa, SlackRTMCallback *callback, gpointer user_
 }
 
 void slack_rtm_connect(SlackAccount *sa) {
-	slack_api_get(sa, rtm_connect_cb, NULL, "rtm.connect", "batch_presence_aware", "1", "presence_sub", "true", NULL);
+	slack_api_post(sa, rtm_connect_cb, NULL, "rtm.connect", "batch_presence_aware", "1", "presence_sub", "true", NULL);
 }

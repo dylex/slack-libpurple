@@ -17,7 +17,7 @@ typedef enum _PurpleWebsocketOp {
 
 typedef void (*PurpleWebsocketCallback)(PurpleWebsocket *ws, gpointer user_data, PurpleWebsocketOp op, const guchar *msg, size_t len);
 
-PurpleWebsocket *purple_websocket_connect(PurpleAccount *account, const char *url, const char *protocol, PurpleWebsocketCallback callback, void *user_data);
+PurpleWebsocket *purple_websocket_connect(PurpleAccount *account, const char *url, const char *protocol, const char *cookies, PurpleWebsocketCallback callback, void *user_data);
 void purple_websocket_send(PurpleWebsocket *ws, PurpleWebsocketOp op, const guchar *msg, size_t len);
 void purple_websocket_abort(PurpleWebsocket *ws);
 

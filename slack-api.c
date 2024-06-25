@@ -108,19 +108,6 @@ static void api_run(SlackAccount *sa) {
 	api_retry(call);
 }
 
-static GString *slack_api_encode_url(SlackAccount *sa, const char *pfx, const char *endpoint, va_list qargs) {
-	GString *url = g_string_new(NULL);
-	g_string_printf(url, "%s/%s%s?token=%s", sa->api_url, pfx, endpoint, sa->token);
-
-	const char *param;
-	while ((param = va_arg(qargs, const char*))) {
-		const char *val = va_arg(qargs, const char*);
-		g_string_append_printf(url, "&%s=%s", param, purple_url_encode(val));
-	}
-
-	return url;
-}
-
 static char *slack_api_encode_post_request(SlackAccount *sa, const char *url, va_list qargs) {
 	GString *request;
 	gchar *host = NULL, *path = NULL;
@@ -128,29 +115,41 @@ static char *slack_api_encode_post_request(SlackAccount *sa, const char *url, va
 
 	GString *postdata;
 	const char *param;
-	gboolean sep = FALSE;
 
-	postdata = g_string_new("{");
+	// Just a long random number.
+	guint64 delim = ((guint64)g_random_int() << 32) | (guint64)g_random_int();
+
+	postdata = g_string_new("");
+	g_string_printf(postdata, "-----------------------------%" G_GUINT64_FORMAT "\r\n", delim);
 	while ((param = va_arg(qargs, const char*))) {
 		const char *val = va_arg(qargs, const char*);
-		if (sep)
-			g_string_append_c(postdata, ',');
-		append_json_string(postdata, param);
-		g_string_append_c(postdata, ':');
-		append_json_string(postdata, val);
-		sep = TRUE;
+		g_string_append_printf(postdata, "\
+Content-Disposition: form-data; name=\"%s\"\r\n\
+\r\n\
+%s\r\n\
+-----------------------------%" G_GUINT64_FORMAT "\r\n",
+			param, val, delim);
 	}
-	g_string_append_c(postdata, '}');
+
+	g_string_append_printf(postdata,
+"Content-Disposition: form-data; name=\"token\"\r\n\
+\r\n\
+%s\r\n\
+-----------------------------%" G_GUINT64_FORMAT "\r\n",
+		sa->token, delim);
 
 	request = g_string_new(NULL);
 	g_string_append_printf(request, "\
 POST /%s HTTP/1.0\r\n\
 Host: %s\r\n\
-Authorization: Bearer %s\r\n\
-Content-Type: application/json;charset=utf-8\r\n\
-Content-Length: %" G_GSIZE_FORMAT "\r\n\
-\r\n",
-		path, host, sa->token, postdata->len);
+Content-Type: multipart/form-data; boundary=---------------------------%" G_GUINT64_FORMAT "\r\n\
+Content-Length: %" G_GSIZE_FORMAT "\r\n",
+		path, host, delim, postdata->len);
+
+	if (sa->d_cookie) {
+		g_string_append_printf(request, "Cookie: d=%s\r\n", sa->d_cookie);
+	}
+	g_string_append(request, "\r\n");
 	g_string_append(request, postdata->str);
 
 	g_free(host);
@@ -172,18 +171,6 @@ static void slack_api_call_url(SlackAccount *sa, SlackAPICallback callback, gpoi
 	g_queue_push_tail(&sa->api_calls, call);
 	if (empty)
 		api_retry(call);
-}
-
-void slack_api_get(SlackAccount *sa, SlackAPICallback callback, gpointer user_data, const char *endpoint, ...)
-{
-	va_list qargs;
-	va_start(qargs, endpoint);
-	GString *url = slack_api_encode_url(sa, "", endpoint, qargs);
-	va_end(qargs);
-
-	slack_api_call_url(sa, callback, user_data, url->str, NULL);
-
-	g_string_free(url, TRUE);
 }
 
 void slack_api_post(SlackAccount *sa, SlackAPICallback callback, gpointer user_data, const gchar *endpoint, ...)

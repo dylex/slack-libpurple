@@ -463,7 +463,7 @@ static void ws_connect_cb(gpointer data, gint source, const gchar *error_message
 }
 
 PurpleWebsocket *purple_websocket_connect(PurpleAccount *account,
-		const char *url, const char *protocol,
+		const char *url, const char *protocol, const char *cookies,
 		PurpleWebsocketCallback callback, void *user_data) {
 	gboolean ssl = FALSE;
 
@@ -515,6 +515,8 @@ Sec-WebSocket-Key: %s\r\n\
 Sec-WebSocket-Version: 13\r\n", path, host, ws->key);
 		if (protocol)
 			g_string_append_printf(request, "Sec-WebSocket-Protocol: %s\r\n", protocol);
+		if (cookies)
+			g_string_append_printf(request, "Cookie: %s\r\n", cookies);
 		g_string_append(request, "\r\n");
 
 		ws->output.len = request->len;

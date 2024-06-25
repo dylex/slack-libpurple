@@ -251,7 +251,7 @@ static void slack_thread_lookup_ts(SlackAccount *sa, slack_thread_lookup_ts_cb *
 	lookup->rest = g_strdup(rest);
 
 	const char *id = slack_conversation_id(conv);
-	slack_api_get(sa, slack_thread_lookup_ts_history_cb, lookup, "conversations.history", "channel", id, "oldest", start, "latest", end, "inclusive", "1", NULL);
+	slack_api_post(sa, slack_thread_lookup_ts_history_cb, lookup, "conversations.history", "channel", id, "oldest", start, "latest", end, "inclusive", "1", NULL);
 }
 
 static void slack_thread_post_lookup_cb(SlackAccount *sa, SlackObject *conv, gpointer data, const char *thread_ts, const char *msg) {

@@ -179,7 +179,7 @@ static gboolean channels_members_cb(SlackAccount *sa, gpointer data, json_value 
 	json_value *metadata = json_get_prop_type(json, "response_metadata", object);
 	char *next_cursor = json_get_prop_strptr(metadata, "next_cursor");
 	if (strcmp(next_cursor, "")) {
-		slack_api_get(sa, channels_members_cb, chan, "conversations.members", "channel", chan->object.id, "cursor", next_cursor, NULL);
+		slack_api_post(sa, channels_members_cb, chan, "conversations.members", "channel", chan->object.id, "cursor", next_cursor, NULL);
 	}
 
 	return FALSE;
@@ -206,7 +206,7 @@ static gboolean channels_info_cb(SlackAccount *sa, gpointer data, json_value *js
 	}
 
 	if (purple_account_get_bool(sa->account, "channel_members", TRUE))
-		slack_api_get(sa, channels_members_cb, chan, "conversations.members", "channel", chan->object.id, NULL);
+		slack_api_post(sa, channels_members_cb, chan, "conversations.members", "channel", chan->object.id, NULL);
 
 	if (purple_account_get_bool(sa->account, "open_history", FALSE)) {
 		slack_get_history_unread(sa, &chan->object, json);
@@ -225,7 +225,7 @@ void slack_chat_open(SlackAccount *sa, SlackChannel *chan) {
 
 	serv_got_joined_chat(sa->gc, chan->cid, chan->object.name);
 
-	slack_api_get(sa, channels_info_cb, GINT_TO_POINTER(chan->type), "conversations.info", "channel", chan->object.id, NULL);
+	slack_api_post(sa, channels_info_cb, GINT_TO_POINTER(chan->type), "conversations.info", "channel", chan->object.id, NULL);
 }
 
 static gboolean channels_join_cb(SlackAccount *sa, gpointer data, json_value *json, const char *error) {

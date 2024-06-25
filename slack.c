@@ -282,14 +282,35 @@ static void slack_login(PurpleAccount *account) {
 	/* check if a token has been stored in the password field. */
 	const char *password = purple_account_get_password(sa->account);
 	if(g_regex_match_simple("^xox.-.+", password, 0, 0)) {
-		/* the password is a token, so copy it to the token field */
-		sa->token = g_strdup(password);
+		/* The password is a token. There might be one or two tokens
+		   depending on whether we are using the cookie token or not. */
+		gchar **tokens = g_regex_split_simple(" +", password, 0, 0);
+		gboolean normal_token = FALSE;
+		gboolean cookie_token = FALSE;
+		for (int c = 0; tokens[c] != NULL; c++) {
+			/* copy to the respective token field */
+			if (!cookie_token && strncmp("xoxd-", tokens[c], 5) == 0) {
+				sa->d_cookie = g_strdup(tokens[c]);
+				cookie_token = TRUE;
+			} else if (!normal_token) {
+				sa->token = g_strdup(tokens[c]);
+				normal_token = TRUE;
+			} else {
+				purple_connection_error_reason(
+					purple_account_get_connection(sa->account),
+					PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED,
+					"Wrong number of auth tokens.");
+				return;
+			}
+		}
+		g_strfreev(tokens);
 
 		/* set the api url to the property host */
 		sa->api_url = g_strdup_printf("https://%s/api", sa->host);
 
 		/* finally skip the mobile login as we already have a token */
 		sa->login_step = 3;
+
 	} else {
 		if(!password || !*password) {
 			purple_connection_error_reason(
@@ -409,6 +430,7 @@ static void slack_close(PurpleConnection *gc) {
 	g_object_unref(sa->self);
 
 	g_free(sa->api_url);
+	g_free(sa->d_cookie);
 	g_free(sa->token);
 	g_free(sa->email);
 	g_free(sa->host);
