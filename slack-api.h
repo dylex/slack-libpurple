@@ -16,7 +16,7 @@ void slack_api_disconnect(SlackAccount *sa);
 
 #define SLACK_LIMIT_ARG(COUNT)		"limit", G_STRINGIFY(COUNT)
 
-#define SLACK_PAGINATE_LIMIT_COUNT	500
+#define SLACK_PAGINATE_LIMIT_COUNT	1000
 #define SLACK_PAGINATE_LIMIT_ARG	SLACK_LIMIT_ARG(SLACK_PAGINATE_LIMIT_COUNT)
 
 // Documented as maximum in API (2020-07-20).
