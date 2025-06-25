@@ -1,0 +1,48 @@
+name: Linux
+on:
+  - push
+  - pull_request
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install deps
+        run: |
+          sudo apt update
+          sudo apt install -y libglib2.0-dev gettext
+          # We only need these to build, not to run.  Skip the dependency check.
+          sudo apt download libpurple0t64 libpurple-dev
+          sudo dpkg --force-depends -i libpurple0t64*.deb libpurple-dev*.deb
+      - name: make
+        run: make
+
+      - name: archive
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with: 
+            name: plugin 
+            path: lib*.so
+
+      - name: release
+        if: ${{ !env.ACT }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: lib*.so
+          tag: nightly-${{ github.sha }}
+          name: Nightly ${{ github.sha }}
+          allowUpdates: true
+          makeLatest: true
+
+      - name: attest
+        if: ${{ !env.ACT }}
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: lib*.so
