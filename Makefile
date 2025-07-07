@@ -35,7 +35,7 @@ endif
 CC = $(WIN32_DEV_TOP)/mingw-4.7.2/bin/gcc
 
 DATA_ROOT_DIR_PURPLE:="$(PROGFILES32)/Pidgin"
-PLUGIN_DIR_PURPLE:="$(DATA_ROOT_DIR_PURPLE)/plugins"
+PLUGIN_DIR_PURPLE:="$(PROGFILES32)/Pidgin/plugins"
 CFLAGS = \
     -g \
     -O2 \
@@ -88,12 +88,18 @@ json.%: json-parser/json.%
 $(LIBNAME): $(C_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-.PHONY: install install-user
+.PHONY: install install-user install-win32
 install: $(LIBNAME)
 	install -d $(PLUGIN_DIR_PURPLE)
 	install $(LIBNAME) $(PLUGIN_DIR_PURPLE)
 	for z in 16 22 48 ; do \
 		install -d $(DATA_ROOT_DIR_PURPLE)/pixmaps/pidgin/protocols/$$z ; \
+		install -m 0644 img/slack$$z.png $(DATA_ROOT_DIR_PURPLE)/pixmaps/pidgin/protocols/$$z/slack.png ; \
+	done
+
+install-win32: $(LIBNAME)
+	install $(LIBNAME) $(PLUGIN_DIR_PURPLE)
+	for z in 16 22 48 ; do \
 		install -m 0644 img/slack$$z.png $(DATA_ROOT_DIR_PURPLE)/pixmaps/pidgin/protocols/$$z/slack.png ; \
 	done
 

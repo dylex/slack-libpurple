@@ -68,18 +68,18 @@ static inline guchar *buffer_incr(struct buffer *b, size_t n) {
 }
 
 void purple_websocket_abort(PurpleWebsocket *ws) {
+	if (ws == NULL)
+		return;
+	
 	if (ws->ssl_connection != NULL)
 		purple_ssl_close(ws->ssl_connection);
 
 	if (ws->connection != NULL)
 		purple_proxy_connect_cancel(ws->connection);
 
-	purple_debug_misc("websocket", "removing input %d\n", ws->inpa);
+	purple_debug_misc("websocket", "removing input %u\n", ws->inpa);
 	if (ws->inpa > 0)
 		purple_input_remove(ws->inpa);
-
-	if (ws->fd >= 0)
-		close(ws->fd);
 
 	g_free(ws->key);
 	g_free(ws->output.buf);
@@ -105,6 +105,7 @@ static const char *skip_lws(const char *s) {
 					s += 3;
 					break;
 				}
+				return NULL;
 			case '\n':
 			case '\0':
 				return NULL;
@@ -129,11 +130,11 @@ static const char *find_header_content(const char *data, const char *name) {
 
 static gboolean ws_read_headers(PurpleWebsocket *ws, const char *headers) {
 	const char *upgrade = skip_lws(find_header_content(headers, "Upgrade"));
-	if (upgrade && (g_ascii_strncasecmp(upgrade, "websocket", 9) || skip_lws(upgrade+9)))
+	if (upgrade && (g_ascii_strncasecmp(upgrade, "websocket", 9) != 0 || skip_lws(upgrade+9)))
 		upgrade = NULL;
 
 	const char *connection = find_header_content(headers, "Connection");
-	while ((connection = skip_lws(connection)) && g_ascii_strncasecmp(connection, "Upgrade", 7))
+	while ((connection = skip_lws(connection)) && g_ascii_strncasecmp(connection, "Upgrade", 7) != 0)
 		while (*connection++ != ',' && (connection = skip_lws(connection)));
 	if (connection) {
 		const char *e = skip_lws(connection+7);
@@ -150,14 +151,14 @@ static gboolean ws_read_headers(PurpleWebsocket *ws, const char *headers) {
 		g_free(k);
 		gchar *b = g_base64_encode(s, l);
 		l = strlen(b);
-		if (strncmp(accept, b, l) || skip_lws(accept+l))
+		if (strncmp(accept, b, l) != 0 || skip_lws(accept+l))
 			accept = NULL;
 		g_free(b);
 	}
 
 	/* TODO: Sec-WebSocket-Extensions, Sec-WebSocket-Protocol */
 
-	if (strncmp(headers, "HTTP/1.1 101 ", 13) || !upgrade || !connection || !accept) {
+	if (strncmp(headers, "HTTP/1.1 101 ", 13) != 0 || !upgrade || !connection || !accept) {
 		ws_error(ws, headers);
 		return FALSE;
 	}
@@ -249,6 +250,7 @@ static size_t ws_read_message(PurpleWebsocket *ws) {
 					break;
 				default:
 					ws_error(ws, "Unknown frame op");
+					return 0;
 			}
 			return off;
 		}
@@ -281,7 +283,7 @@ static gboolean ws_input(PurpleWebsocket *ws) {
 		return FALSE;
 	}
 
-	if (cond)
+	if (cond != 0)
 		ws->inpa = purple_input_add(ws->fd, cond, ws_input_cb, ws);
 	return TRUE;
 }
@@ -290,9 +292,9 @@ static void ws_input_cb(gpointer data, G_GNUC_UNUSED gint source, PurpleInputCon
 	PurpleWebsocket *ws = data;
 
 	if (cond & PURPLE_INPUT_WRITE) {
-		ssize_t len = ws->output.off >= ws->output.len ? 0 :
+		gssize len = ws->output.off >= ws->output.len ? 0 :
 			ws->ssl_connection
-			? (ssize_t)purple_ssl_write(ws->ssl_connection, ws->output.buf + ws->output.off, ws->output.len - ws->output.off)
+			? purple_ssl_write(ws->ssl_connection, ws->output.buf + ws->output.off, ws->output.len - ws->output.off)
 			: write(ws->fd, ws->output.buf + ws->output.off, ws->output.len - ws->output.off);
 
 		if (len < 0) {
@@ -315,8 +317,8 @@ static void ws_input_cb(gpointer data, G_GNUC_UNUSED gint source, PurpleInputCon
 
 	while (cond & PURPLE_INPUT_READ) {
 		g_return_if_fail(ws->input.off < ws->input.len);
-		ssize_t len = ws->ssl_connection
-			? (ssize_t)purple_ssl_read(ws->ssl_connection, ws->input.buf + ws->input.off, ws->input.siz - ws->input.off)
+		gssize len = ws->ssl_connection
+			? purple_ssl_read(ws->ssl_connection, ws->input.buf + ws->input.off, ws->input.siz - ws->input.off)
 			: read(ws->fd, ws->input.buf + ws->input.off, ws->input.siz - ws->input.off);
 
 		if (len < 0) {
@@ -382,6 +384,7 @@ static void ws_input_cb(gpointer data, G_GNUC_UNUSED gint source, PurpleInputCon
 }
 
 void purple_websocket_send(PurpleWebsocket *ws, PurpleWebsocketOp op, const guchar *msg, size_t len) {
+	g_return_if_fail(ws);
 	g_return_if_fail(ws->connected && !(ws->closed & PURPLE_INPUT_WRITE));
 	g_return_if_fail(!(op & ~WS_OP_MASK));
 	gboolean buf = ws->output.len;
