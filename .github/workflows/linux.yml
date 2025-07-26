@@ -32,7 +32,7 @@ jobs:
             path: lib*.so
 
       - name: release
-        if: ${{ !env.ACT }}
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !env.ACT
         uses: ncipollo/release-action@v1
         with:
           artifacts: lib*.so
@@ -42,7 +42,7 @@ jobs:
           makeLatest: true
 
       - name: attest
-        if: ${{ !env.ACT }}
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !env.ACT
         uses: actions/attest-build-provenance@v1
         with:
           subject-path: lib*.so
