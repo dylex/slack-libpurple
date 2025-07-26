@@ -1,4 +1,5 @@
 #include <debug.h>
+#include <zlib.h>
 
 #include "slack-api.h"
 #include "slack-json.h"
@@ -42,21 +43,47 @@ static void api_error(SlackAPICall *call, const char *error) {
 
 static gboolean api_retry(SlackAPICall *call);
 static void api_run(SlackAccount *sa);
+gchar *api_gunzip(const guchar *gzip_data, gsize *len_ptr);
 
-static void api_cb(PurpleUtilFetchUrlData *fetch, gpointer data, const gchar *buf, gsize len, const gchar *error) {
+static void api_cb(PurpleUtilFetchUrlData *fetch, gpointer data, const gchar *buf_h, gsize len_h, const gchar *error) {
+	gboolean free_buf = FALSE;
 	SlackAccount *sa = data;
 	SlackAPICall *call = g_queue_pop_head(&sa->api_calls);
 	g_return_if_fail(call && (call->fetch == fetch || (call->fetch == NULL && error)));
 	call->fetch = NULL;
 
+	gsize len = len_h;
+	const gchar *buf = g_strstr_len(buf_h, len_h, "\r\n\r\n");
+	if (buf) {
+		buf += 4; // skip the headers
+		len = len_h - (buf - buf_h);
+	} else {
+		buf = buf_h;
+		len = len_h;
+	}
+
+	if (g_strstr_len(buf_h, len_h - len, "Content-Encoding: gzip") != NULL ||
+			g_strstr_len(buf_h, len_h - len, "content-encoding: gzip") != NULL) {
+		gchar *gunzip = api_gunzip((const guchar *)buf, &len);
+		if (!gunzip) {
+			api_error(call, "Failed to gunzip response");
+			api_run(sa);
+			return;
+		}
+		free_buf = TRUE;
+		buf = gunzip;
+	}
+
 	purple_debug_misc("slack", "api response: %s\n", error ?: buf);
 	if (error) {
+		if (free_buf) g_free((gchar *)buf);
 		api_error(call, error);
 		api_run(sa);
 		return;
 	}
 
 	json_value *json = json_parse(buf, len);
+	if (free_buf) g_free((gchar *)buf);
 	if (!json) {
 		api_error(call, "Invalid JSON response");
 		api_run(sa);
@@ -94,7 +121,7 @@ static gboolean api_retry(SlackAPICall *call) {
 	purple_debug_misc("slack", "api call: %s\n%s\n", call->url, call->request ?: "");
 	PurpleUtilFetchUrlData *fetch =
 		purple_util_fetch_url_request_len_with_account(call->sa->account,
-			call->url, TRUE, NULL, TRUE, call->request, FALSE, 4096*1024,
+			call->url, TRUE, NULL, TRUE, call->request, TRUE, 4096*1024,
 			api_cb, call->sa);
 	if (fetch)
 		call->fetch = fetch;
@@ -149,6 +176,7 @@ Content-Length: %" G_GSIZE_FORMAT "\r\n",
 	if (sa->d_cookie) {
 		g_string_append_printf(request, "Cookie: d=%s\r\n", sa->d_cookie);
 	}
+	g_string_append(request, "Accept-Encoding: gzip\r\n");
 	g_string_append(request, "\r\n");
 	g_string_append(request, postdata->str);
 
@@ -193,4 +221,82 @@ void slack_api_disconnect(SlackAccount *sa) {
 	SlackAPICall *call;
 	while ((call = g_queue_pop_head(&sa->api_calls)))
 		api_error(call, "disconnected");
+}
+
+
+#include <zlib.h>
+
+gchar *
+api_gunzip(const guchar *gzip_data, gsize *len_ptr)
+{
+	gsize gzip_data_len	= *len_ptr;
+	z_stream zstr;
+	int gzip_err = 0;
+	gchar *data_buffer;
+	gulong gzip_len = G_MAXUINT16;
+	GString *output_string = NULL;
+
+	data_buffer = g_new0(gchar, gzip_len);
+
+	zstr.next_in = NULL;
+	zstr.avail_in = 0;
+	zstr.zalloc = Z_NULL;
+	zstr.zfree = Z_NULL;
+	zstr.opaque = 0;
+	gzip_err = inflateInit2(&zstr, MAX_WBITS+32);
+	if (gzip_err != Z_OK)
+	{
+		g_free(data_buffer);
+		purple_debug_error("slack", "no built-in gzip support in zlib\n");
+		return NULL;
+	}
+
+	zstr.next_in = (Bytef *)gzip_data;
+	zstr.avail_in = gzip_data_len;
+
+	zstr.next_out = (Bytef *)data_buffer;
+	zstr.avail_out = gzip_len;
+
+	gzip_err = inflate(&zstr, Z_SYNC_FLUSH);
+
+	if (gzip_err == Z_DATA_ERROR)
+	{
+		inflateEnd(&zstr);
+		gzip_err = inflateInit2(&zstr, -MAX_WBITS);
+		if (gzip_err != Z_OK)
+		{
+			g_free(data_buffer);
+			purple_debug_error("slack", "Cannot decode gzip header\n");
+			return NULL;
+		}
+		zstr.next_in = (Bytef *)gzip_data;
+		zstr.avail_in = gzip_data_len;
+		zstr.next_out = (Bytef *)data_buffer;
+		zstr.avail_out = gzip_len;
+		gzip_err = inflate(&zstr, Z_SYNC_FLUSH);
+	}
+	output_string = g_string_new("");
+	while (gzip_err == Z_OK)
+	{
+		//append data to buffer
+		output_string = g_string_append_len(output_string, data_buffer, gzip_len - zstr.avail_out);
+		//reset buffer pointer
+		zstr.next_out = (Bytef *)data_buffer;
+		zstr.avail_out = gzip_len;
+		gzip_err = inflate(&zstr, Z_SYNC_FLUSH);
+	}
+	if (gzip_err == Z_STREAM_END)
+	{
+		output_string = g_string_append_len(output_string, data_buffer, gzip_len - zstr.avail_out);
+	} else {
+		purple_debug_error("slack", "gzip inflate error\n");
+	}
+	inflateEnd(&zstr);
+
+	g_free(data_buffer);
+
+	if (len_ptr)
+		*len_ptr = output_string->len;
+
+	return g_string_free(output_string, FALSE);
 }

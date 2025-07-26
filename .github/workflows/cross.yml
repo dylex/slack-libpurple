@@ -61,6 +61,7 @@ jobs:
           export WIN32_CC=i686-w64-mingw32-gcc
           export WIN32_DEV_TOP=win32-dev
           export PIDGIN_TREE_TOP=pidgin
+          export OS=Windows_NT
           make libslack.dll
 
       - name: archive
@@ -71,7 +72,7 @@ jobs:
             path: lib*.dll
 
       - name: release
-        if: ${{ !env.ACT }}
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !env.ACT
         uses: ncipollo/release-action@v1
         with:
           artifacts: lib*.dll
@@ -81,7 +82,7 @@ jobs:
           makeLatest: true
 
       - name: attest
-        if: ${{ !env.ACT }}
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !env.ACT
         uses: actions/attest-build-provenance@v1
         with:
           subject-path: lib*.dll
