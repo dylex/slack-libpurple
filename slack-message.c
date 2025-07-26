@@ -10,6 +10,7 @@
 #include "slack-conversation.h"
 #include "slack-message.h"
 #include "slack-thread.h"
+#include "slack-emoji.h"
 
 gchar *slack_html_to_message(SlackAccount *sa, const char *s, PurpleMessageFlags flags) {
 
@@ -71,7 +72,9 @@ gchar *slack_html_to_message(SlackAccount *sa, const char *s, PurpleMessageFlags
 		g_string_append_c(msg, *s++);
 	}
 
-	return g_string_free(msg, FALSE);
+	gchar *converted = slack_emoji_unicode_to_slackcode(sa->emoji_ctx, msg->str);
+	g_string_free(msg, TRUE);
+	return converted;
 }
 
 void slack_message_to_html(GString *html, SlackAccount *sa, gchar *s, PurpleMessageFlags *flags, gchar *prepend_newline_str) {
@@ -81,6 +84,8 @@ void slack_message_to_html(GString *html, SlackAccount *sa, gchar *s, PurpleMess
 	if (flags)
 		*flags |= PURPLE_MESSAGE_NO_LINKIFY;
 
+	gchar *converted = slack_emoji_slackcode_to_unicode(sa->emoji_ctx, s);
+	s = converted;
 	size_t l = strlen(s);
 	char *end = &s[l];
 
@@ -176,6 +181,8 @@ void slack_message_to_html(GString *html, SlackAccount *sa, gchar *s, PurpleMess
 		g_free(replace);
 		g_free(newHtml);
 	}
+
+	g_free(converted);
 }
 
 /*
